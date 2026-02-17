@@ -1,0 +1,499 @@
+%% Fifth Iteration - Copy and Paste everything below into a notepad app, then open with chrome or edge
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard Master</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <style>
+        /* --- CSS STYLES --- */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #eef2f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            height: 85vh;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f2f5;
+            padding-bottom: 15px;
+        }
+
+        h1, h2, h3 { margin: 0; color: #333; }
+
+        /* DASHBOARD GRID */
+        #set-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 5px;
+        }
+
+        .set-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: 0.2s;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 100px;
+        }
+
+        .set-card:hover {
+            transform: translateY(-3px);
+            border-color: #4257b2;
+            box-shadow: 0 5px 15px rgba(66, 87, 178, 0.2);
+        }
+
+        .set-card h3 { font-size: 1.1rem; margin-bottom: 5px; }
+        .set-card p { font-size: 0.9rem; color: #777; margin: 0; margin-bottom: 10px; }
+
+        .set-delete-btn {
+            background: #ffebe6;
+            color: #cc0000;
+            font-size: 0.8rem;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            align-self: center;
+        }
+
+        .dashboard-controls { margin-top: 20px; display: flex; gap: 10px; }
+
+        /* STUDY VIEW */
+        #study-view { flex-grow: 1; display: flex; flex-direction: column; }
+        .study-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .study-actions { display: flex; gap: 8px; }
+
+        .card-container {
+            flex-grow: 1;
+            perspective: 1000px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+        }
+
+        .card-container.flip .card-inner { transform: rotateY(180deg); }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border-radius: 12px;
+            padding: 20px;
+            box-sizing: border-box;
+            font-size: 1.8rem;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #e0e0e0;
+        }
+
+        .card-front { background-color: white; color: #333; z-index: 2; }
+        .card-back { background-color: #4257b2; color: white; transform: rotateY(180deg); z-index: 1; }
+
+        .hint { font-size: 0.9rem; color: #999; margin-top: 20px; font-weight: normal; }
+        .controls { display: flex; align-items: center; justify-content: center; gap: 20px; }
+        .counter { font-weight: bold; color: #555; }
+
+        /* MANAGE VIEW */
+        .hidden { display: none !important; }
+        #manage-view { display: flex; flex-direction: column; height: 100%; overflow: hidden; }
+
+        .table-wrapper {
+            flex-grow: 1;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f9fa; position: sticky; top: 0; padding: 12px; text-align: left; border-bottom: 2px solid #ddd; z-index: 10; }
+        td { padding: 8px; border-bottom: 1px solid #eee; }
+        
+        td input { 
+            width: 100%; padding: 10px; 
+            border: 1px solid transparent; 
+            border-radius: 4px; box-sizing: border-box; 
+            font-size: 1rem;
+        }
+        td input:focus { border: 1px solid #4257b2; background: #f0f7ff; outline: none; }
+
+        /* BUTTONS */
+        button { cursor: pointer; padding: 10px 15px; border: none; border-radius: 6px; font-weight: bold; transition: 0.2s; font-size: 0.95rem;}
+        .primary-btn { background-color: #42b257; color: white; flex-grow: 1; }
+        .secondary-btn { background-color: #e4e6eb; color: #333; }
+        .action-btn { background-color: #4257b2; color: white; }
+        .icon-btn { background-color: transparent; color: #555; font-size: 1rem; }
+        button:hover { opacity: 0.9; transform: scale(1.02); }
+        button:active { transform: scale(0.98); }
+        .delete-btn { background: #ff6b6b; color: white; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 50%; padding: 0; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="header">
+            <h1 id="app-title">Flashcard Master</h1>
+            <div class="header-buttons">
+                <button id="home-btn" class="icon-btn hidden"><i class="fas fa-home"></i> Home</button>
+            </div>
+        </div>
+
+        <div id="dashboard-view">
+            <h2>Your Library</h2>
+            <div id="set-grid">
+                </div>
+            
+            <div class="dashboard-controls">
+                <button id="create-set-btn" class="primary-btn">+ Create New Set</button>
+                <button id="import-btn" class="secondary-btn"><i class="fas fa-file-upload"></i> Import</button>
+                <input type="file" id="file-input" style="display: none;" accept=".json">
+            </div>
+        </div>
+
+        <div id="study-view" class="hidden">
+            <div class="study-header">
+                <h3 id="current-set-title">Current Set</h3>
+                <div class="study-actions">
+                    <button id="edit-set-btn" class="secondary-btn"><i class="fas fa-pen"></i> Edit</button>
+                    <button id="shuffle-btn" class="icon-btn" title="Shuffle"><i class="fas fa-random"></i></button>
+                    <button id="share-btn" class="action-btn" title="Download JSON"><i class="fas fa-share-alt"></i> Share</button>
+                </div>
+            </div>
+
+            <div class="card-container" id="flashcard">
+                <div class="card-inner">
+                    <div class="card-front">
+                        <p id="question">Loading...</p>
+                        <span class="hint">(Press Space to Flip)</span>
+                    </div>
+                    <div class="card-back">
+                        <p id="answer"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button id="prev-btn"><i class="fas fa-arrow-left"></i> Prev</button>
+                <div class="counter" id="card-count">1 / 1</div>
+                <button id="next-btn">Next <i class="fas fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <div id="manage-view" class="hidden">
+            <div class="table-wrapper">
+                <table id="card-table">
+                    <thead>
+                        <tr>
+                            <th>Question</th>
+                            <th>Answer</th>
+                            <th width="50"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="card-table-body"></tbody>
+                </table>
+            </div>
+            <div class="manage-controls">
+                <button id="add-row-btn" class="action-btn">+ Add Row</button>
+                <button id="save-btn" class="primary-btn">Save Changes</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // --- JAVASCRIPT LOGIC ---
+
+        // 1. STATE & DATA
+        let library = {}; 
+        let currentSetName = null; 
+        let currentCards = []; 
+        let currentIndex = 0;
+
+        const defaultLibrary = {
+            "Demo Set": [
+                { question: "Welcome!", answer: "This is your first card." },
+                { question: "How to Flip?", answer: "Click or Press Space." },
+                { question: "How to Edit?", answer: "Click the 'Edit' button above." }
+            ]
+        };
+
+        // 2. SETUP
+        window.onload = () => {
+            loadLibrary();
+            renderDashboard();
+        };
+
+        function loadLibrary() {
+            const stored = localStorage.getItem('flashcardLibrary');
+            if (stored) {
+                library = JSON.parse(stored);
+            } else {
+                library = defaultLibrary;
+                saveLibrary();
+            }
+        }
+
+        function saveLibrary() {
+            localStorage.setItem('flashcardLibrary', JSON.stringify(library));
+        }
+
+        // 3. NAVIGATION
+        const views = {
+            dashboard: document.getElementById('dashboard-view'),
+            study: document.getElementById('study-view'),
+            manage: document.getElementById('manage-view')
+        };
+        const homeBtn = document.getElementById('home-btn');
+
+        function switchView(viewName) {
+            Object.values(views).forEach(el => el.classList.add('hidden'));
+            homeBtn.classList.add('hidden');
+            views[viewName].classList.remove('hidden');
+            if (viewName !== 'dashboard') homeBtn.classList.remove('hidden');
+        }
+
+        homeBtn.onclick = () => {
+            currentSetName = null;
+            renderDashboard();
+            switchView('dashboard');
+        };
+
+        // 4. DASHBOARD
+        function renderDashboard() {
+            const grid = document.getElementById('set-grid');
+            grid.innerHTML = '';
+            Object.keys(library).forEach(setName => {
+                const cardCount = library[setName].length;
+                const card = document.createElement('div');
+                card.className = 'set-card';
+                card.innerHTML = `
+                    <div>
+                        <h3>${setName}</h3>
+                        <p>${cardCount} Cards</p>
+                    </div>
+                    <button class="set-delete-btn" onclick="deleteSet(event, '${setName}')">Delete Set</button>
+                `;
+                card.onclick = (e) => {
+                    if(e.target.classList.contains('set-delete-btn')) return;
+                    openSet(setName);
+                };
+                grid.appendChild(card);
+            });
+        }
+
+        document.getElementById('create-set-btn').onclick = () => {
+            const name = prompt("Enter a name for the new set:");
+            if (name && !library[name]) {
+                library[name] = [];
+                saveLibrary();
+                renderDashboard();
+            } else if (library[name]) {
+                alert("Set already exists!");
+            }
+        };
+
+        window.deleteSet = (e, name) => {
+            e.stopPropagation();
+            if (confirm(`Delete "${name}"? This cannot be undone.`)) {
+                delete library[name];
+                saveLibrary();
+                renderDashboard();
+            }
+        };
+
+        // 5. IMPORT / EXPORT
+        document.getElementById('share-btn').onclick = () => {
+            if (!currentSetName) return;
+            const dataStr = JSON.stringify(library[currentSetName]);
+            const blob = new Blob([dataStr], { type: "application/json" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentSetName}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        };
+
+        document.getElementById('import-btn').onclick = () => document.getElementById('file-input').click();
+
+        document.getElementById('file-input').onchange = (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const importedCards = JSON.parse(e.target.result);
+                    if (Array.isArray(importedCards)) {
+                        const name = prompt("Name for imported set:", file.name.replace('.json', ''));
+                        if (name) {
+                            library[name] = importedCards;
+                            saveLibrary();
+                            renderDashboard();
+                            alert("Import successful!");
+                        }
+                    } else { alert("Invalid file."); }
+                } catch (err) { alert("Error reading file."); }
+            };
+            reader.readAsText(file);
+            e.target.value = '';
+        };
+
+        // 6. STUDY MODE
+        const cardContainer = document.getElementById('flashcard');
+        const questionEl = document.getElementById('question');
+        const answerEl = document.getElementById('answer');
+        const cardCountEl = document.getElementById('card-count');
+
+        function openSet(name) {
+            currentSetName = name;
+            currentCards = [...library[name]];
+            currentIndex = 0;
+            document.getElementById('current-set-title').textContent = name;
+            switchView('study');
+            displayCard();
+        }
+
+        function displayCard() {
+            cardContainer.classList.remove('flip');
+            setTimeout(() => {
+                if (currentCards.length > 0) {
+                    if (currentIndex >= currentCards.length) currentIndex = 0;
+                    if (currentIndex < 0) currentIndex = 0;
+                    questionEl.textContent = currentCards[currentIndex].question;
+                    answerEl.textContent = currentCards[currentIndex].answer;
+                    cardCountEl.textContent = `${currentIndex + 1} / ${currentCards.length}`;
+                } else {
+                    questionEl.textContent = "Empty Set";
+                    answerEl.textContent = "Click Edit to add cards";
+                    cardCountEl.textContent = "0 / 0";
+                }
+            }, 200);
+        }
+
+        document.getElementById('next-btn').onclick = () => {
+            if (currentCards.length <= 1) return;
+            currentIndex = (currentIndex + 1) % currentCards.length;
+            displayCard();
+        };
+
+        document.getElementById('prev-btn').onclick = () => {
+            if (currentCards.length <= 1) return;
+            currentIndex = (currentIndex - 1 + currentCards.length) % currentCards.length;
+            displayCard();
+        };
+
+        cardContainer.onclick = () => cardContainer.classList.toggle('flip');
+
+        document.getElementById('shuffle-btn').onclick = () => {
+            for (let i = currentCards.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [currentCards[i], currentCards[j]] = [currentCards[j], currentCards[i]];
+            }
+            currentIndex = 0;
+            displayCard();
+        };
+
+        // 7. MANAGE MODE
+        const tableBody = document.getElementById('card-table-body');
+
+        document.getElementById('edit-set-btn').onclick = () => {
+            switchView('manage');
+            renderTable();
+        };
+
+        function renderTable() {
+            tableBody.innerHTML = '';
+            library[currentSetName].forEach(card => addTableRow(card.question, card.answer));
+            addTableRow(); 
+        }
+
+        function addTableRow(q = '', a = '') {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><input type="text" class="q-input" value="${q}" placeholder="Question"></td>
+                <td><input type="text" class="a-input" value="${a}" placeholder="Answer"></td>
+                <td style="text-align:center;">
+                    <button class="delete-btn" onclick="this.closest('tr').remove()"><i class="fas fa-trash"></i></button>
+                </td>
+            `;
+            tableBody.appendChild(tr);
+        }
+
+        document.getElementById('add-row-btn').onclick = () => {
+            addTableRow();
+            document.querySelector('.table-wrapper').scrollTop = document.querySelector('.table-wrapper').scrollHeight;
+        };
+
+        document.getElementById('save-btn').onclick = () => {
+            const newCards = [];
+            document.querySelectorAll('#card-table-body tr').forEach(row => {
+                const q = row.querySelector('.q-input').value.trim();
+                const a = row.querySelector('.a-input').value.trim();
+                if (q && a) newCards.push({ question: q, answer: a });
+            });
+            library[currentSetName] = newCards;
+            saveLibrary();
+            currentCards = [...newCards];
+            currentIndex = 0;
+            switchView('study');
+            displayCard();
+        };
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (views.study.classList.contains('hidden')) return;
+            if (e.code === 'Space') { e.preventDefault(); cardContainer.classList.toggle('flip'); }
+            if (e.code === 'ArrowRight') document.getElementById('next-btn').click();
+            if (e.code === 'ArrowLeft') document.getElementById('prev-btn').click();
+        });
+    </script>
+</body>
+</html>
